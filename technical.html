@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Technical Details — Research Vault</title>
+
+  <!--
+    External dependencies:
+    - Google Fonts: Inter (400,600,700) + JetBrains Mono — DESIGN.md typography
+    - assets/shared.css  — DESIGN.md tokens, two-column layout, sidebar, nav, hero, table, card, callout, footer
+    - assets/mermaid-init.js — Mermaid v11 ESM with DESIGN.md themeVariables (startOnLoad: true)
+    - assets/nav.js — injects site-nav at document.body, sets .active on current page, IntersectionObserver TOC
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/shared.css">
+  <script type="module" src="assets/mermaid-init.js"></script>
+  <script defer src="assets/nav.js"></script>
+  <!--
+    Explicit mermaid.run() for technical.html — ESM startOnLoad may not fire when
+    document.readyState is already 'complete' by the time the module executes (ES modules
+    are deferred by spec). This inline module imports the same cached instance initialized
+    by mermaid-init.js and explicitly renders the two diagrams on this page.
+  -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    // Runs synchronously after mermaid-init.js has called initialize(); DOM is ready.
+    mermaid.run({ querySelector: 'pre.mermaid' });
+  </script>
+
+  <style>
+    /* ── Page-specific overrides for technical.html ── */
+
+    /* Sections get scroll-margin to clear the injected sticky site-nav (52px) */
+    section { scroll-margin-top: 68px; }
+
+    /* ── Table wrapper ── */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-md);
+      margin-bottom: var(--sp-md);
+    }
+    .table-wrap table { margin: 0; }
+
+    /* ── Diagram label + legend ── */
+    .diagram-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--c-text-muted);
+      margin-bottom: var(--sp-sm);
+      display: block;
+    }
+
+    .tier-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-md);
+      font-size: 0.8125rem;
+      color: var(--c-text-sec);
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-md);
+      padding: var(--sp-sm) var(--sp-md);
+      margin-bottom: var(--sp-sm);
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dot-blue  { background: var(--c-accent); }
+    .dot-amber { background: var(--c-warm); }
+    .dot-muted { background: var(--c-text-muted); }
+    .dot-green { background: var(--c-success); }
+
+    /* ── Infrastructure 2×2 card grid ── */
+    .infra-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--sp-md);
+      margin-top: var(--sp-md);
+    }
+
+    .infra-card {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-md);
+      padding: var(--sp-md);
+      transition: border-color 150ms ease;
+      cursor: default;
+    }
+    .infra-card:hover { border-color: var(--c-accent); }
+
+    .infra-card-header {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-sm);
+      margin-bottom: var(--sp-sm);
+    }
+
+    /* SVG icon badge — replaces emoji per DESIGN.md Icon System rule */
+    .infra-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--c-tag-bg);
+      border-radius: var(--r-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--c-accent);
+    }
+    .infra-icon svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .infra-title {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      color: var(--c-text);
+    }
+
+    .infra-desc {
+      font-size: 0.875rem;
+      color: var(--c-text-sec);
+      line-height: 1.55;
+    }
+
+    /* ── Mobile & responsive overrides ── */
+    @media (max-width: 800px) {
+      .infra-grid { grid-template-columns: 1fr 1fr; }
+      .tier-legend { flex-direction: column; gap: var(--sp-sm); }
+    }
+    @media (max-width: 480px) {
+      .infra-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body data-page="technical">
+
+  <!-- Mobile navigation — visible ≤800px; sticky below injected site-nav (top: 52px) -->
+  <details class="mobile-nav" aria-label="Page sections">
+    <summary>Contents</summary>
+    <ul class="mobile-nav-list">
+      <li><a href="#tech-stack">Tech Stack</a></li>
+      <li><a href="#agent-architecture">Agent Architecture</a></li>
+      <li><a href="#orchestrate-pipeline">/orchestrate Pipeline</a></li>
+      <li><a href="#quality-testing">Quality &amp; Testing</a></li>
+      <li><a href="#infrastructure">Infrastructure</a></li>
+    </ul>
+  </details>
+
+  <div class="layout">
+
+    <!-- Sidebar TOC — desktop only (hidden ≤800px via shared.css) -->
+    <aside class="sidebar" aria-label="Table of contents">
+      <span class="sidebar-label">Sections</span>
+      <ul class="toc" role="list">
+        <li><a href="#tech-stack">Tech Stack</a></li>
+        <li><a href="#agent-architecture">Agent Architecture</a></li>
+        <li><a href="#orchestrate-pipeline">/orchestrate Pipeline</a></li>
+        <li><a href="#quality-testing">Quality &amp; Testing</a></li>
+        <li><a href="#infrastructure">Infrastructure</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main content -->
+    <main class="content" id="main-content">
+
+      <!-- Hero banner — DESIGN.md briefing-hero component -->
+      <header class="page-hero">
+        <span class="hero-breadcrumb">Research Vault / Technical Details</span>
+        <h1>Under the Hood</h1>
+        <p class="hero-subtitle">
+          The implementation story — a custom Python agent framework, Claude API orchestration,
+          a 985-test suite, and the engineering decisions that keep the system reliable at scale.
+        </p>
+      </header>
+
+      <!-- ──────────────────────────────────────────────────────────────
+           Section 1 — Tech Stack
+      ─────────────────────────────────────────────────────────────── -->
+      <section id="tech-stack" aria-labelledby="h-tech-stack">
+        <h2 id="h-tech-stack">Tech Stack</h2>
+
+        <div class="table-wrap" role="region" aria-label="Tech stack table">
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Language</td>
+                <td>Python 3.12</td>
+              </tr>
+              <tr>
+                <td>AI</td>
+                <td>Claude API (<code>claude-sonnet-4-6</code> primary)</td>
+              </tr>
+              <tr>
+                <td>Orchestration</td>
+                <td>Claude Code + custom agent framework</td>
+              </tr>
+              <tr>
+                <td>Storage</td>
+                <td>Markdown + YAML frontmatter (primary), SQLite (telemetry), LanceDB (embeddings)</td>
+              </tr>
+              <tr>
+                <td>Content store</td>
+                <td>Obsidian vault</td>
+              </tr>
+              <tr>
+                <td>Testing</td>
+                <td>pytest — 985 tests</td>
+              </tr>
+              <tr>
+                <td>Scripting</td>
+                <td>30+ custom Python scripts (ingest, generate, repair, lint)</td>
+              </tr>
+              <tr>
+                <td>Hosting</td>
+                <td>GitHub Pages (this site)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ──────────────────────────────────────────────────────────────
+           Section 2 — Agent Architecture
+      ─────────────────────────────────────────────────────────────── -->
+      <section id="agent-architecture" aria-labelledby="h-agent-architecture">
+        <h2 id="h-agent-architecture">Agent Architecture</h2>
+        <p>
+          The controller pattern: a main Claude Code session dispatches specialized
+          subagents in parallel — each running in an isolated git worktree to prevent
+          merge conflicts. Agents are ephemeral; the vault is the durable state. The
+          controller reviews each agent's output before cherry-picking commits to main.
+        </p>
+
+        <div class="diagram-block" role="img" aria-label="Agent architecture: controller dispatches five specialized agents (Explore, Plan, TDD, code-reviewer, ui-ux-designer) and collects results">
+          <span class="diagram-label">AGENT-ARCH — Controller + subagent topology</span>
+          <div class="tier-legend" aria-hidden="true">
+            <span class="legend-item"><span class="dot dot-blue"></span>Controller</span>
+            <span class="legend-item"><span class="dot dot-amber"></span>Specialized agents</span>
+          </div>
+          <pre class="mermaid">flowchart LR
+    CTL["Controller\n(Claude Code session)"]
+    EX["Explore agents\n(read-only search)"]
+    PL["Plan agent\n(architecture design)"]
+    TDD["tdd-implementer\n(TDD execution)"]
+    CR["code-reviewer\n(spec-pass + quality-pass)"]
+    UX["ui-ux-designer\n(HTML build + verify)"]
+    CTL -->|"search"| EX
+    CTL -->|"design"| PL
+    CTL -->|"implement"| TDD
+    CTL -->|"review"| CR
+    CTL -->|"HTML"| UX
+    EX & PL & TDD & CR & UX -->|"results"| CTL
+    classDef controller fill:#EFF6FF,stroke:#2563EB,color:#1E3A8A,font-weight:bold
+    classDef agent fill:#FFFBEB,stroke:#D97706,color:#92400E
+    class CTL controller
+    class EX,PL,TDD,CR,UX agent</pre>
+        </div>
+      </section>
+
+      <!-- ──────────────────────────────────────────────────────────────
+           Section 3 — /orchestrate Pipeline
+      ─────────────────────────────────────────────────────────────── -->
+      <section id="orchestrate-pipeline" aria-labelledby="h-orchestrate-pipeline">
+        <h2 id="h-orchestrate-pipeline">The /orchestrate Pipeline</h2>
+        <p>
+          The vault's primary ingestion command. It reads every raw file from the
+          inbox, dispatches parallel Claude API enrichment agents, and writes structured
+          YAML-frontmattered saves to <code>01_Social_Memory</code>. Each run is logged to <code>CHANGELOG</code>
+          with cost, save count, and error count.
+        </p>
+
+        <div class="diagram-block" role="img" aria-label="Orchestrate sequence diagram: user invokes /orchestrate; controller reads inbox files, dispatches N parallel enrichment agents, agents write saves and CHANGELOG, return summary">
+          <span class="diagram-label">ORCHESTRATE-SEQ — Ingestion sequence</span>
+          <div class="tier-legend" aria-hidden="true">
+            <span class="legend-item"><span class="dot dot-blue"></span>Controller</span>
+            <span class="legend-item"><span class="dot dot-amber"></span>Enrichment agents</span>
+            <span class="legend-item"><span class="dot dot-green"></span>Vault storage</span>
+          </div>
+          <pre class="mermaid">sequenceDiagram
+    participant U as User
+    participant C as Controller
+    participant I as 00_Inbox
+    participant A as Enrichment Agents
+    participant V as 01_Social_Memory
+    participant L as CHANGELOG
+    U->>C: /orchestrate
+    C->>I: Read raw .md files
+    I-->>C: N files found
+    C->>A: Dispatch N agents (parallel)
+    A-->>V: Write enriched saves
+    A-->>L: Log CHANGELOG entries
+    A-->>C: N results (enriched / skipped / error)
+    C->>U: Summary (cost · saves · errors)</pre>
+        </div>
+      </section>
+
+      <!-- ──────────────────────────────────────────────────────────────
+           Section 4 — Quality & Testing
+      ─────────────────────────────────────────────────────────────── -->
+      <section id="quality-testing" aria-labelledby="h-quality-testing">
+        <h2 id="h-quality-testing">Quality &amp; Testing</h2>
+        <p>
+          Every new feature follows TDD: failing test first, then implementation,
+          then green, then commit. The quality-RSI loop closes the feedback cycle
+          automatically.
+        </p>
+        <ul>
+          <li>
+            <strong>985 pytest tests</strong> — agent behavior, pipeline invariants,
+            script correctness, and YAML schema validation all covered
+          </li>
+          <li>
+            <strong>Two-stage code review</strong> — spec-pass agent (does the diff match
+            the plan?) + quality-pass agent (is it correct and well-designed?)
+          </li>
+          <li>
+            <strong>Quality-RSI loop</strong> — instrument &rarr; measure &rarr; calibrated
+            judge cascade &rarr; improve &rarr; re-measure on the next run
+          </li>
+        </ul>
+      </section>
+
+      <!-- ──────────────────────────────────────────────────────────────
+           Section 5 — Key Infrastructure
+      ─────────────────────────────────────────────────────────────── -->
+      <section id="infrastructure" aria-labelledby="h-infrastructure">
+        <h2 id="h-infrastructure">Key Infrastructure</h2>
+
+        <div class="infra-grid" role="list">
+
+          <!-- Card 1 — Append-only Logs -->
+          <article class="infra-card" role="listitem">
+            <div class="infra-card-header">
+              <!-- Log / document list icon (Lucide-style inline SVG) -->
+              <span class="infra-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M9 12h6M9 16h6M9 8h6M5 20h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>
+                </svg>
+              </span>
+              <span class="infra-title">Append-only Logs</span>
+            </div>
+            <p class="infra-desc">
+              CHANGELOG / GAPS / SUGGESTIONS / INSIGHTS / NEXT-STEPS each live as a
+              folder of timestamped <code>.md</code> entries with a derived index.
+              Never overwritten; always queryable by future sessions.
+            </p>
+          </article>
+
+          <!-- Card 2 — BFS Navigation -->
+          <article class="infra-card" role="listitem">
+            <div class="infra-card-header">
+              <!-- Layers / BFS scan icon -->
+              <span class="infra-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="m21 21-4.35-4.35"/>
+                </svg>
+              </span>
+              <span class="infra-title">BFS Navigation</span>
+            </div>
+            <p class="infra-desc">
+              L0 topic scan &rarr; L1 YAML frontmatter filter &rarr; L2 full read.
+              Scales to 6K+ saves without reading everything; the filter eliminates
+              80&ndash;90% of reads before they happen.
+            </p>
+          </article>
+
+          <!-- Card 3 — Git Worktrees -->
+          <article class="infra-card" role="listitem">
+            <div class="infra-card-header">
+              <!-- Git branch icon -->
+              <span class="infra-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <line x1="6" y1="3" x2="6" y2="15"/>
+                  <circle cx="18" cy="6" r="3"/>
+                  <circle cx="6" cy="18" r="3"/>
+                  <path d="M18 9a9 9 0 0 1-9 9"/>
+                </svg>
+              </span>
+              <span class="infra-title">Git Worktrees</span>
+            </div>
+            <p class="infra-desc">
+              Each concurrent agent works in a fresh git worktree.
+              Cherry-pick to main when done — no merge conflicts,
+              no clobbered in-progress work.
+            </p>
+          </article>
+
+          <!-- Card 4 — Embeddings + Telemetry -->
+          <article class="infra-card" role="listitem">
+            <div class="infra-card-header">
+              <!-- Database / telemetry icon -->
+              <span class="infra-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                  <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                  <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                </svg>
+              </span>
+              <span class="infra-title">Embeddings + Telemetry</span>
+            </div>
+            <p class="infra-desc">
+              LanceDB vector embeddings for semantic retrieval; SQLite for per-run
+              telemetry (cost, quality score, save count). Complement the
+              markdown-first storage model.
+            </p>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="page-footer">
+        Built with Claude &middot; <a href="https://github.com/allstoncodes/research-vault-showcase">GitHub</a>
+      </footer>
+
+    </main>
+  </div>
+
+</body>
+</html>
