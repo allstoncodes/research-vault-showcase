@@ -9,26 +9,14 @@
     External dependencies:
     - Google Fonts: Inter (400,600,700) + JetBrains Mono — DESIGN.md typography
     - assets/shared.css  — DESIGN.md tokens, two-column layout, sidebar, nav, hero, table, card, callout, footer
-    - assets/mermaid-init.js — Mermaid v11 ESM with DESIGN.md themeVariables (startOnLoad: true)
     - assets/nav.js — injects site-nav at document.body, sets .active on current page, IntersectionObserver TOC
+    Note: Mermaid removed 2026-06-27; both diagrams replaced with hand-authored inline SVG.
   -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/shared.css">
-  <script type="module" src="assets/mermaid-init.js"></script>
   <script defer src="assets/nav.js"></script>
-  <!--
-    Explicit mermaid.run() for technical.html — ESM startOnLoad may not fire when
-    document.readyState is already 'complete' by the time the module executes (ES modules
-    are deferred by spec). This inline module imports the same cached instance initialized
-    by mermaid-init.js and explicitly renders the two diagrams on this page.
-  -->
-  <script type="module">
-    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-    // Runs synchronously after mermaid-init.js has called initialize(); DOM is ready.
-    mermaid.run({ querySelector: 'pre.mermaid' });
-  </script>
 
   <style>
     /* ── Page-specific overrides for technical.html ── */
@@ -260,23 +248,90 @@
             <span class="legend-item"><span class="dot dot-blue"></span>Controller</span>
             <span class="legend-item"><span class="dot dot-amber"></span>Specialized agents</span>
           </div>
-          <pre class="mermaid">flowchart LR
-    CTL["Controller\n(Claude Code session)"]
-    EX["Explore agents\n(read-only search)"]
-    PL["Plan agent\n(architecture design)"]
-    TDD["tdd-implementer\n(TDD execution)"]
-    CR["code-reviewer\n(spec-pass + quality-pass)"]
-    UX["ui-ux-designer\n(HTML build + verify)"]
-    CTL -->|"search"| EX
-    CTL -->|"design"| PL
-    CTL -->|"implement"| TDD
-    CTL -->|"review"| CR
-    CTL -->|"HTML"| UX
-    EX & PL & TDD & CR & UX -->|"results"| CTL
-    classDef controller fill:#EFF6FF,stroke:#2563EB,color:#1E3A8A,font-weight:bold
-    classDef agent fill:#FFFBEB,stroke:#D97706,color:#92400E
-    class CTL controller
-    class EX,PL,TDD,CR,UX agent</pre>
+          <!-- Hand-authored inline SVG — no Mermaid dependency -->
+          <!-- viewBox 860×330; DESIGN.md tokens: blue=#EFF6FF/#2563EB/#1E3A8A, amber=#FFFBEB/#D97706/#92400E -->
+          <svg viewBox="0 0 860 330" width="100%" role="img" aria-label="Agent architecture: Controller dispatches five specialized subagents via labeled edges and collects results via a dashed return path" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+            <defs>
+              <!-- Gray arrowhead, 10×7 user-space units; tip 1 unit past path end -->
+              <marker id="arch-ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#6B6B6B"/>
+              </marker>
+            </defs>
+
+            <!-- Controller (blue: #EFF6FF/#2563EB/#1E3A8A) — center (112, 160) -->
+            <rect x="20" y="115" width="185" height="90" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="2"/>
+            <text x="112" y="151" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" fill="#1E3A8A">Controller</text>
+            <text x="112" y="169" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10.5" fill="#1E3A8A">(Claude Code session)</text>
+
+            <!-- Agent nodes (amber: #FFFBEB/#D97706/#92400E) — x=550, width=285 -->
+            <!-- A1: Explore agents, box y=18–62, center y=40 -->
+            <rect x="550" y="18" width="285" height="44" rx="6" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
+            <text x="692" y="36" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#92400E">Explore agents</text>
+            <text x="692" y="51" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#92400E">(read-only search)</text>
+
+            <!-- A2: Plan agent, box y=76–120, center y=98 -->
+            <rect x="550" y="76" width="285" height="44" rx="6" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
+            <text x="692" y="94" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#92400E">Plan agent</text>
+            <text x="692" y="109" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#92400E">(architecture design)</text>
+
+            <!-- A3: tdd-implementer, box y=134–178, center y=156 -->
+            <rect x="550" y="134" width="285" height="44" rx="6" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
+            <text x="692" y="152" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#92400E">tdd-implementer</text>
+            <text x="692" y="167" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#92400E">(TDD execution)</text>
+
+            <!-- A4: code-reviewer, box y=192–236, center y=214 -->
+            <rect x="550" y="192" width="285" height="44" rx="6" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
+            <text x="692" y="210" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#92400E">code-reviewer</text>
+            <text x="692" y="225" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#92400E">(spec-pass + quality-pass)</text>
+
+            <!-- A5: ui-ux-designer, box y=250–294, center y=272 -->
+            <rect x="550" y="250" width="285" height="44" rx="6" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
+            <text x="692" y="268" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#92400E">ui-ux-designer</text>
+            <text x="692" y="283" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#92400E">(HTML build + verify)</text>
+
+            <!-- Forward dispatch arrows (solid): CTL right edge (x=205) fanned over y=133..187 → agents (x=550) -->
+            <!-- White label rects placed above each arrow line for legibility -->
+
+            <!-- CTL → Explore: "search", fan y=133 → agent y=40 -->
+            <line x1="205" y1="133" x2="550" y2="40" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#arch-ah)"/>
+            <rect x="342" y="62" width="70" height="16" rx="3" fill="#FFFFFF" fill-opacity="0.9"/>
+            <text x="377" y="75" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" font-style="italic" fill="#6B6B6B">search</text>
+
+            <!-- CTL → Plan: "design", fan y=146 → agent y=98 -->
+            <line x1="205" y1="146" x2="550" y2="98" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#arch-ah)"/>
+            <rect x="342" y="98" width="70" height="16" rx="3" fill="#FFFFFF" fill-opacity="0.9"/>
+            <text x="377" y="111" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" font-style="italic" fill="#6B6B6B">design</text>
+
+            <!-- CTL → TDD: "implement", fan y=160 → agent y=156 (near-horizontal) -->
+            <line x1="205" y1="160" x2="550" y2="156" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#arch-ah)"/>
+            <rect x="339" y="137" width="76" height="16" rx="3" fill="#FFFFFF" fill-opacity="0.9"/>
+            <text x="377" y="150" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" font-style="italic" fill="#6B6B6B">implement</text>
+
+            <!-- CTL → code-reviewer: "review", fan y=174 → agent y=214 -->
+            <line x1="205" y1="174" x2="550" y2="214" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#arch-ah)"/>
+            <rect x="342" y="173" width="70" height="16" rx="3" fill="#FFFFFF" fill-opacity="0.9"/>
+            <text x="377" y="186" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" font-style="italic" fill="#6B6B6B">review</text>
+
+            <!-- CTL → ui-ux-designer: "HTML", fan y=187 → agent y=272 -->
+            <line x1="205" y1="187" x2="550" y2="272" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#arch-ah)"/>
+            <rect x="349" y="207" width="56" height="16" rx="3" fill="#FFFFFF" fill-opacity="0.9"/>
+            <text x="377" y="220" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" font-style="italic" fill="#6B6B6B">HTML</text>
+
+            <!-- Return path (dashed): agents → Controller -->
+            <!-- Short horizontal tails from each agent right edge (x=835) to collection bar (x=848) -->
+            <line x1="835" y1="40"  x2="848" y2="40"  stroke="#6B6B6B" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <line x1="835" y1="98"  x2="848" y2="98"  stroke="#6B6B6B" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <line x1="835" y1="156" x2="848" y2="156" stroke="#6B6B6B" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <line x1="835" y1="214" x2="848" y2="214" stroke="#6B6B6B" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <line x1="835" y1="272" x2="848" y2="272" stroke="#6B6B6B" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <!-- Vertical collection bar -->
+            <line x1="848" y1="40" x2="848" y2="272" stroke="#6B6B6B" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <!-- Sweep: down to y=308, left to CTL bottom center (112, 205) -->
+            <path d="M 848 272 L 848 308 L 112 308 L 112 205" stroke="#6B6B6B" stroke-width="1.5" stroke-dasharray="4,3" fill="none" marker-end="url(#arch-ah)"/>
+            <!-- "results" label on the return sweep -->
+            <rect x="424" y="299" width="72" height="16" rx="3" fill="#FFFFFF" fill-opacity="0.9"/>
+            <text x="460" y="311" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" font-style="italic" fill="#6B6B6B">results</text>
+          </svg>
         </div>
       </section>
 
@@ -299,21 +354,99 @@
             <span class="legend-item"><span class="dot dot-amber"></span>Enrichment agents</span>
             <span class="legend-item"><span class="dot dot-green"></span>Vault storage</span>
           </div>
-          <pre class="mermaid">sequenceDiagram
-    participant U as User
-    participant C as Controller
-    participant I as 00_Inbox
-    participant A as Enrichment Agents
-    participant V as 01_Social_Memory
-    participant L as CHANGELOG
-    U->>C: /orchestrate
-    C->>I: Read raw .md files
-    I-->>C: N files found
-    C->>A: Dispatch N agents (parallel)
-    A-->>V: Write enriched saves
-    A-->>L: Log CHANGELOG entries
-    A-->>C: N results (enriched / skipped / error)
-    C->>U: Summary (cost · saves · errors)</pre>
+          <!-- Hand-authored inline SVG sequence diagram — no Mermaid dependency -->
+          <!-- viewBox 880×600; 6 lifelines evenly at x=73,220,367,514,661,808 (spacing=147) -->
+          <!-- Blue headers: User/Controller/00_Inbox/Enrichment Agents (#EFF6FF/#2563EB/#1E3A8A) -->
+          <!-- Green headers: 01_Social_Memory/CHANGELOG (#D1FAE5/#059669/#065F46) -->
+          <svg viewBox="0 0 880 600" width="100%" role="img" aria-label="Orchestrate sequence: User calls /orchestrate; Controller reads inbox, dispatches parallel enrichment agents; agents write saves and CHANGELOG, return results summary to User" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+            <defs>
+              <!-- Gray arrowhead for sequence arrows -->
+              <marker id="seq-ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#6B6B6B"/>
+              </marker>
+            </defs>
+
+            <!-- ── Lifeline header boxes (width=100, y=15–61) ── -->
+
+            <!-- 1. User (blue), center x=73 -->
+            <rect x="23" y="15" width="100" height="46" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="73" y="42" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" fill="#1E3A8A">User</text>
+
+            <!-- 2. Controller (blue), center x=220 -->
+            <rect x="170" y="15" width="100" height="46" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="220" y="42" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11.5" font-weight="600" fill="#1E3A8A">Controller</text>
+
+            <!-- 3. 00_Inbox (blue), center x=367 -->
+            <rect x="317" y="15" width="100" height="46" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="367" y="42" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11.5" font-weight="600" fill="#1E3A8A">00_Inbox</text>
+
+            <!-- 4. Enrichment Agents (blue, 2-line), center x=514 -->
+            <rect x="464" y="15" width="100" height="46" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="514" y="34" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="600" fill="#1E3A8A">Enrichment</text>
+            <text x="514" y="50" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="600" fill="#1E3A8A">Agents</text>
+
+            <!-- 5. 01_Social_Memory (green storage, 2-line), center x=661 -->
+            <rect x="611" y="15" width="100" height="46" rx="6" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
+            <text x="661" y="34" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="600" fill="#065F46">01_Social</text>
+            <text x="661" y="50" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="600" fill="#065F46">Memory</text>
+
+            <!-- 6. CHANGELOG (green storage), center x=808 -->
+            <rect x="758" y="15" width="100" height="46" rx="6" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
+            <text x="808" y="42" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="600" fill="#065F46">CHANGELOG</text>
+
+            <!-- ── Lifeline vertical dashes (y=61 → y=572) ── -->
+            <line x1="73"  y1="61" x2="73"  y2="572" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="5,5"/>
+            <line x1="220" y1="61" x2="220" y2="572" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="5,5"/>
+            <line x1="367" y1="61" x2="367" y2="572" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="5,5"/>
+            <line x1="514" y1="61" x2="514" y2="572" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="5,5"/>
+            <line x1="661" y1="61" x2="661" y2="572" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="5,5"/>
+            <line x1="808" y1="61" x2="808" y2="572" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="5,5"/>
+
+            <!-- ── Message arrows ── -->
+            <!-- Solid = call; dashed = return. Labels above arrow with white bg rect. -->
+            <!-- Arrow stroke-width=2 for solid calls; 1.5 for dashed returns. -->
+
+            <!-- MSG 1: User → Controller: /orchestrate (solid, y=100) -->
+            <line x1="73" y1="100" x2="220" y2="100" stroke="#6B6B6B" stroke-width="2" marker-end="url(#seq-ah)"/>
+            <rect x="83" y="79" width="107" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
+            <text x="146" y="92" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#1C1C1E">/orchestrate</text>
+
+            <!-- MSG 2: Controller → 00_Inbox: Read raw .md files (solid, y=160) -->
+            <line x1="220" y1="160" x2="367" y2="160" stroke="#6B6B6B" stroke-width="2" marker-end="url(#seq-ah)"/>
+            <rect x="220" y="139" width="147" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
+            <text x="293" y="152" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" fill="#1C1C1E">Read raw .md files</text>
+
+            <!-- MSG 3: 00_Inbox → Controller: N files found (dashed return, y=220) -->
+            <line x1="367" y1="220" x2="220" y2="220" stroke="#6B6B6B" stroke-width="1.5" stroke-dasharray="6,4" marker-end="url(#seq-ah)"/>
+            <rect x="224" y="199" width="139" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
+            <text x="293" y="212" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" fill="#1C1C1E">N files found</text>
+
+            <!-- MSG 4: Controller → Enrichment Agents: Dispatch N agents (parallel) (solid, y=285) -->
+            <line x1="220" y1="285" x2="514" y2="285" stroke="#6B6B6B" stroke-width="2" marker-end="url(#seq-ah)"/>
+            <rect x="218" y="264" width="298" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
+            <text x="367" y="277" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" fill="#1C1C1E">Dispatch N agents (parallel)</text>
+
+            <!-- MSG 5: Enrichment Agents → 01_Social_Memory: Write enriched saves (solid, y=350) -->
+            <line x1="514" y1="350" x2="661" y2="350" stroke="#6B6B6B" stroke-width="2" marker-end="url(#seq-ah)"/>
+            <rect x="510" y="329" width="155" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
+            <text x="587" y="342" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" fill="#1C1C1E">Write enriched saves</text>
+
+            <!-- MSG 6: Enrichment Agents → CHANGELOG: Log entries (solid, y=410) -->
+            <line x1="514" y1="410" x2="808" y2="410" stroke="#6B6B6B" stroke-width="2" marker-end="url(#seq-ah)"/>
+            <rect x="619" y="389" width="84" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
+            <text x="661" y="402" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" fill="#1C1C1E">Log entries</text>
+
+            <!-- MSG 7: Enrichment Agents → Controller: N results (dashed return, y=475) -->
+            <line x1="514" y1="475" x2="220" y2="475" stroke="#6B6B6B" stroke-width="1.5" stroke-dasharray="6,4" marker-end="url(#seq-ah)"/>
+            <rect x="229" y="454" width="291" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
+            <text x="367" y="467" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#1C1C1E">N results (enriched / skipped / error)</text>
+
+            <!-- MSG 8: Controller → User: Summary (dashed return, y=540, 2-line label) -->
+            <line x1="220" y1="540" x2="73" y2="540" stroke="#6B6B6B" stroke-width="1.5" stroke-dasharray="6,4" marker-end="url(#seq-ah)"/>
+            <rect x="55" y="510" width="183" height="28" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
+            <text x="146" y="524" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#1C1C1E">Summary</text>
+            <text x="146" y="537" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#6B6B6B">(cost · saves · errors)</text>
+          </svg>
         </div>
       </section>
 

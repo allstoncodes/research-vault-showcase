@@ -9,25 +9,14 @@
     External dependencies:
     - Google Fonts: Inter (400,600,700) + JetBrains Mono — DESIGN.md typography stack
     - assets/shared.css — DESIGN.md tokens + shared layout (sidebar, hero, cards, callout, table)
-    - assets/mermaid-init.js — Mermaid v11 (ESM, via jsDelivr CDN) with DESIGN.md theme vars
     - assets/nav.js — injects .site-nav bar; drives sidebar TOC active states via IntersectionObserver
+    Diagrams: hand-authored inline SVG (no Mermaid dependency).
   -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/shared.css">
-  <script type="module" src="assets/mermaid-init.js"></script>
   <script defer src="assets/nav.js"></script>
-  <!--
-    Explicit mermaid.run() for overview.html — ESM startOnLoad may not fire when
-    document.readyState is already 'complete' by the time the module executes (ES modules
-    are deferred by spec). This inline module imports the same cached instance initialized
-    by mermaid-init.js and explicitly renders both diagrams on this page.
-  -->
-  <script type="module">
-    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-    mermaid.run({ querySelector: 'pre.mermaid' });
-  </script>
 
   <style>
     /* ── Page-specific overrides for overview.html ── */
@@ -200,61 +189,185 @@ references back down to its constituent saves.</p>
 
       <!-- ───────────────────────────────────────────────────────────────
            Section 3 — Vault Structure
-           Mermaid graph TD: weighted DAG from raw inbox through enriched
+           Hand-authored inline SVG: weighted DAG from raw inbox through enriched
            saves, topic synthesis, connections, and active project context.
-           Infra subgraph uses amber fill/stroke (classDef infra).
+           Infra logs cluster uses amber fill/stroke.
       ─────────────────────────────────────────────────────────────────── -->
       <section id="vault-structure" aria-labelledby="h-vault-structure">
         <h2 id="h-vault-structure">Vault Structure</h2>
         <p>The vault is organized as a weighted DAG. Content flows from raw saves upward
 through topic synthesis and cross-domain connection into active project context.</p>
-        <div class="diagram-block" role="img" aria-label="Vault structure: weighted DAG from raw inbox to enriched saves, topic articles, cross-domain connections, and active projects. Infra logs (CHANGELOG, GAPS, SUGGESTIONS, INSIGHTS) shown separately in amber.">
-          <pre class="mermaid">flowchart TD
-    INB["00_Inbox\n(raw saves)"]
-    SM["01_Social_Memory\n(6,183 enriched saves)"]
-    IDX["TOPIC-INDEX\n(128 leaf indexes)"]
-    TOP["02_Topics\n(59 topic articles)"]
-    CON["04_Connections\n(43 connections)"]
-    PRO["03_Projects\n(active projects)"]
-    INB -->|"LLM enrichment"| SM
-    SM --- IDX
-    SM -->|"/compile"| TOP
-    TOP -->|"/connect"| CON
-    CON -->|"/query match"| PRO
-    subgraph infra["Infrastructure Logs"]
-        CL["CHANGELOG"]
-        GA["GAPS"]
-        SG["SUGGESTIONS"]
-        IN["INSIGHTS"]
-    end
-    classDef primary fill:#EFF6FF,stroke:#2563EB,color:#1E3A8A
-    classDef infra fill:#FFFBEB,stroke:#D97706,color:#92400E
-    class INB,SM,IDX,TOP,CON,PRO primary
-    class CL,GA,SG,IN infra</pre>
+        <div class="diagram-block">
+          <!-- Vault structure: weighted DAG. Left column: 00_Inbox → 01_Social_Memory → 02_Topics → 04_Connections → 03_Projects. TOPIC-INDEX branches right from 01_Social_Memory. Amber cluster at right: Infrastructure Logs (CHANGELOG, GAPS, SUGGESTIONS, INSIGHTS). -->
+          <svg viewBox="0 0 860 520" width="100%" role="img" aria-label="Vault structure: weighted DAG from raw inbox through enriched saves, TOPIC-INDEX, topic articles, cross-domain connections, and active projects. Infrastructure logs shown as amber side cluster." style="display:block;">
+            <defs>
+              <marker id="vs-arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#6B6B6B"/>
+              </marker>
+            </defs>
+
+            <!-- ── 00_Inbox ── -->
+            <rect x="40" y="20" width="320" height="52" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="200" y="38" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="600" fill="#1E3A8A">00_Inbox</text>
+            <text x="200" y="55" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#1E3A8A">(raw saves)</text>
+
+            <!-- Arrow: LLM enrichment -->
+            <line x1="200" y1="74" x2="200" y2="140" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#vs-arrow)"/>
+            <text x="213" y="110" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#6B6B6B">LLM enrichment</text>
+
+            <!-- ── 01_Social_Memory ── -->
+            <rect x="40" y="142" width="320" height="52" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="200" y="160" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="600" fill="#1E3A8A">01_Social_Memory</text>
+            <text x="200" y="177" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#1E3A8A">(6,183 enriched saves)</text>
+
+            <!-- SM → TOPIC-INDEX (horizontal branch) -->
+            <line x1="362" y1="168" x2="488" y2="168" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#vs-arrow)"/>
+
+            <!-- ── TOPIC-INDEX ── -->
+            <rect x="490" y="142" width="240" height="52" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="610" y="160" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="600" fill="#1E3A8A">TOPIC-INDEX</text>
+            <text x="610" y="177" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#1E3A8A">(128 leaf indexes)</text>
+
+            <!-- Arrow: /compile -->
+            <line x1="200" y1="196" x2="200" y2="272" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#vs-arrow)"/>
+            <text x="213" y="236" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#6B6B6B">/compile</text>
+
+            <!-- ── 02_Topics ── -->
+            <rect x="40" y="274" width="320" height="52" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="200" y="292" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="600" fill="#1E3A8A">02_Topics</text>
+            <text x="200" y="309" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#1E3A8A">(59 topic articles)</text>
+
+            <!-- Arrow: /connect -->
+            <line x1="200" y1="328" x2="200" y2="384" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#vs-arrow)"/>
+            <text x="213" y="358" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#6B6B6B">/connect</text>
+
+            <!-- ── 04_Connections ── -->
+            <rect x="40" y="386" width="320" height="52" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="200" y="404" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="600" fill="#1E3A8A">04_Connections</text>
+            <text x="200" y="421" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#1E3A8A">(43 connections)</text>
+
+            <!-- Arrow: /query match -->
+            <line x1="200" y1="440" x2="200" y2="466" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#vs-arrow)"/>
+            <text x="213" y="454" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#6B6B6B">/query match</text>
+
+            <!-- ── 03_Projects ── -->
+            <rect x="40" y="468" width="320" height="48" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="200" y="486" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="600" fill="#1E3A8A">03_Projects</text>
+            <text x="200" y="503" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#1E3A8A">(active projects)</text>
+
+            <!-- ── Infrastructure Logs cluster (amber) ── -->
+            <rect x="480" y="274" width="360" height="218" rx="8" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
+            <text x="660" y="299" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="700" fill="#92400E" letter-spacing="0.04em">Infrastructure Logs</text>
+
+            <!-- CHANGELOG -->
+            <rect x="498" y="316" width="148" height="40" rx="4" fill="#FFFBEB" stroke="#D97706" stroke-width="1"/>
+            <text x="572" y="336" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="600" fill="#92400E">CHANGELOG</text>
+
+            <!-- GAPS -->
+            <rect x="664" y="316" width="148" height="40" rx="4" fill="#FFFBEB" stroke="#D97706" stroke-width="1"/>
+            <text x="738" y="336" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="600" fill="#92400E">GAPS</text>
+
+            <!-- SUGGESTIONS -->
+            <rect x="498" y="380" width="148" height="40" rx="4" fill="#FFFBEB" stroke="#D97706" stroke-width="1"/>
+            <text x="572" y="400" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="600" fill="#92400E">SUGGESTIONS</text>
+
+            <!-- INSIGHTS -->
+            <rect x="664" y="380" width="148" height="40" rx="4" fill="#FFFBEB" stroke="#D97706" stroke-width="1"/>
+            <text x="738" y="400" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="600" fill="#92400E">INSIGHTS</text>
+
+            <text x="660" y="458" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="9" fill="#B45309" font-style="italic">append-only · auto-indexed</text>
+          </svg>
         </div>
       </section>
 
       <!-- ───────────────────────────────────────────────────────────────
            Section 4 — Content Flow
-           Mermaid flowchart LR: a single save's journey from share-sheet
+           Hand-authored inline SVG: a single save's journey from share-sheet
            to synthesized knowledge. Action nodes in blue; storage in green.
       ─────────────────────────────────────────────────────────────────── -->
       <section id="content-flow" aria-labelledby="h-content-flow">
         <h2 id="h-content-flow">Content Flow</h2>
         <p>A single save travels from raw file to synthesized knowledge in three steps.</p>
-        <div class="diagram-block" role="img" aria-label="Content flow left to right: share-sheet to raw inbox, Claude API enrichment (blue), Social Memory (green), /compile synthesis (blue), topic article (green), /connect cross-domain (blue), connection note (green).">
-          <pre class="mermaid">flowchart LR
-    A["Share-sheet\nor Web Clipper"] --> B["00_Inbox\n(raw .md file)"]
-    B --> C["Claude API\nenrichment"]
-    C --> D["01_Social_Memory\n(enriched save)"]
-    D --> E["/compile\ntopic synthesis"]
-    E --> F["02_Topics\n(topic article)"]
-    F --> G["/connect\ncross-domain"]
-    G --> H["04_Connections\n(connection note)"]
-    classDef action fill:#EFF6FF,stroke:#2563EB,color:#1E3A8A
-    classDef storage fill:#D1FAE5,stroke:#059669,color:#065F46
-    class C,E,G action
-    class B,D,F,H storage</pre>
+        <div class="diagram-block">
+          <!-- Content flow: 2-row snake pipeline. Row 1 L→R: source → Inbox → Claude API enrichment → Social_Memory. Row 2 R→L: /compile → Topics → /connect → Connections. Action nodes blue; storage nodes green. -->
+          <svg viewBox="0 0 820 265" width="100%" role="img" aria-label="Content flow two-row pipeline. Row 1 left to right: Share-sheet or Web Clipper, 00_Inbox raw files (green), Claude API enrichment (blue), 01_Social_Memory enriched saves (green). Row 2 right to left: /compile topic synthesis (blue), 02_Topics topic article (green), /connect cross-domain (blue), 04_Connections connection note (green)." style="display:block;">
+            <defs>
+              <marker id="cf-arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#6B6B6B"/>
+              </marker>
+            </defs>
+
+            <!-- ── ROW 1 (left → right) ── -->
+
+            <!-- A: Share-sheet / Web Clipper (source, neutral) -->
+            <rect x="10" y="20" width="160" height="52" rx="6" fill="#F9FAFB" stroke="#9CA3AF" stroke-width="1.5"/>
+            <text x="90" y="38" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="600" fill="#374151">Share-sheet</text>
+            <text x="90" y="55" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#374151">or Web Clipper</text>
+
+            <!-- A → B -->
+            <line x1="172" y1="46" x2="218" y2="46" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#cf-arrow)"/>
+
+            <!-- B: 00_Inbox (storage, green) -->
+            <rect x="220" y="20" width="160" height="52" rx="6" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
+            <text x="300" y="38" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="600" fill="#065F46">00_Inbox</text>
+            <text x="300" y="55" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#065F46">(raw .md file)</text>
+
+            <!-- B → C -->
+            <line x1="382" y1="46" x2="428" y2="46" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#cf-arrow)"/>
+
+            <!-- C: Claude API enrichment (action, blue) -->
+            <rect x="430" y="20" width="160" height="52" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="510" y="38" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="600" fill="#1E3A8A">Claude API</text>
+            <text x="510" y="55" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#1E3A8A">enrichment</text>
+
+            <!-- C → D -->
+            <line x1="592" y1="46" x2="638" y2="46" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#cf-arrow)"/>
+
+            <!-- D: 01_Social_Memory (storage, green) -->
+            <rect x="640" y="20" width="160" height="52" rx="6" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
+            <text x="720" y="38" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="600" fill="#065F46">01_Social_Memory</text>
+            <text x="720" y="55" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#065F46">(enriched save)</text>
+
+            <!-- D → E (down connector, right column) -->
+            <line x1="720" y1="74" x2="720" y2="173" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#cf-arrow)"/>
+
+            <!-- ── ROW 2 (right → left) ── -->
+
+            <!-- E: /compile (action, blue) -->
+            <rect x="640" y="175" width="160" height="52" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="720" y="193" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="600" fill="#1E3A8A">/compile</text>
+            <text x="720" y="210" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#1E3A8A">topic synthesis</text>
+
+            <!-- E → F (leftward) -->
+            <line x1="638" y1="201" x2="592" y2="201" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#cf-arrow)"/>
+
+            <!-- F: 02_Topics (storage, green) -->
+            <rect x="430" y="175" width="160" height="52" rx="6" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
+            <text x="510" y="193" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="600" fill="#065F46">02_Topics</text>
+            <text x="510" y="210" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#065F46">(topic article)</text>
+
+            <!-- F → G (leftward) -->
+            <line x1="428" y1="201" x2="382" y2="201" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#cf-arrow)"/>
+
+            <!-- G: /connect (action, blue) -->
+            <rect x="220" y="175" width="160" height="52" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="300" y="193" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="600" fill="#1E3A8A">/connect</text>
+            <text x="300" y="210" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#1E3A8A">cross-domain</text>
+
+            <!-- G → H (leftward) -->
+            <line x1="218" y1="201" x2="172" y2="201" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#cf-arrow)"/>
+
+            <!-- H: 04_Connections (storage, green) -->
+            <rect x="10" y="175" width="160" height="52" rx="6" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
+            <text x="90" y="193" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="600" fill="#065F46">04_Connections</text>
+            <text x="90" y="210" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#065F46">(connection note)</text>
+
+            <!-- ── Legend ── -->
+            <rect x="10" y="242" width="12" height="12" rx="2" fill="#EFF6FF" stroke="#2563EB" stroke-width="1"/>
+            <text x="27" y="248" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#6B6B6B" dominant-baseline="middle">Action node</text>
+            <rect x="115" y="242" width="12" height="12" rx="2" fill="#D1FAE5" stroke="#059669" stroke-width="1"/>
+            <text x="132" y="248" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#6B6B6B" dominant-baseline="middle">Storage node</text>
+          </svg>
         </div>
       </section>
 

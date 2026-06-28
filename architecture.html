@@ -8,28 +8,14 @@
   <!--
     External dependencies:
     - Google Fonts: Inter (400,600,700) + JetBrains Mono — DESIGN.md typography stack
-    - Mermaid.js v11 via jsDelivr CDN (loaded as ES module via assets/mermaid-init.js)
     - Shared design tokens + layout: assets/shared.css
     - Site nav injection + ToC scroll tracking: assets/nav.js
+    Diagrams: hand-authored inline SVG — no JS required.
   -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/shared.css">
-  <!-- Mermaid: inline initialization block handles the UMD/ESM timing complexity.
-       We load the UMD CDN script synchronously (blocking, so window.mermaid is set
-       before DOMContentLoaded), then immediately override startOnLoad to false so
-       Mermaid's auto-init doesn't fire before we configure it. The module script
-       runs after DOMContentLoaded and calls mermaid.run() with our theme tokens.
-       This pattern avoids the data-processed / re-init conflicts. -->
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-  <script>
-    // Pre-configure before DOMContentLoaded so startOnLoad auto-init is disabled
-    if (window.mermaid) {
-      window.mermaid.initialize({ startOnLoad: false });
-    }
-  </script>
-  <script type="module" src="assets/mermaid-init.js"></script>
   <script defer src="assets/nav.js"></script>
 
   <style>
@@ -106,20 +92,6 @@
       margin: 0;
     }
 
-    /* Mermaid SVG overflow fix: back-edges in flowchart LR (cycle arrows like E→B)
-       render at the bottom of the viewBox but compress to only a few pixels when
-       max-width:100%/height:auto scales a wide diagram into a narrow column.
-       Force a taller minimum on diagram blocks so the viewBox has more vertical
-       room to display, and allow SVG overflow to prevent clipping. */
-    pre.mermaid {
-      min-height: 160px;
-    }
-
-    pre.mermaid svg {
-      overflow: visible;
-      min-height: 120px;
-    }
-
     /* Mobile: at very narrow viewports, the Why column is the longest — keep
        it visible but let the table scroll rather than crushing content */
     @media (max-width: 800px) {
@@ -181,18 +153,48 @@
         <h2 id="h-core-model">The Core Model: A Weighted DAG</h2>
         <p>The vault is a directed acyclic graph where every reference points strictly upward. Saves are leaf nodes. Topics synthesize saves. Connections link topics across domains. Projects consume connections. BFS navigation with YAML-first scoring gates expensive full reads — the system stays fast at 6K+ saves by never reading everything at once.</p>
 
-        <div class="diagram-block" role="img" aria-label="DAG-MODEL: four-node directed acyclic graph showing Save, Topic Article, Connection, and Project nodes with weighted edges pointing upward through each level">
-          <pre class="mermaid">%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#EFF6FF', 'primaryTextColor': '#1C1C1E', 'primaryBorderColor': '#2563EB', 'lineColor': '#6B6B6B'}}}%%
-graph TD
-    S["Save\n(single resource)"]
-    T["Topic Article\n(synthesized concept)"]
-    CN["Connection\n(cross-domain insight)"]
-    P["Project\n(active work context)"]
-    S -->|"weight 1-10 · /compile"| T
-    T -->|"weight 1-10 · /connect"| CN
-    CN -->|"/query match"| P
-    classDef node fill:#EFF6FF,stroke:#2563EB,color:#1E3A8A
-    class S,T,CN,P node</pre>
+        <div class="diagram-block">
+          <svg viewBox="0 0 600 510" width="100%" role="img" aria-label="DAG-MODEL: four-node directed acyclic graph — Save leads to Topic Article via weighted compile, Topic Article leads to Connection via weighted connect, Connection leads to Project via query match">
+            <!-- Node: Save -->
+            <rect x="190" y="30" width="220" height="56" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="300" y="51" font-size="14" font-weight="600">Save</tspan>
+              <tspan x="300" y="69" font-size="12">(single resource)</tspan>
+            </text>
+            <!-- Edge: Save → Topic Article -->
+            <line x1="300" y1="86" x2="300" y2="153" stroke="#6B6B6B" stroke-width="1.5"/>
+            <polygon points="294,153 300,163 306,153" fill="#6B6B6B"/>
+            <rect x="196" y="115" width="208" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.92"/>
+            <text x="300" y="128" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#6B6B6B">weight 1–10 · /compile</text>
+            <!-- Node: Topic Article -->
+            <rect x="190" y="163" width="220" height="56" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="300" y="184" font-size="14" font-weight="600">Topic Article</tspan>
+              <tspan x="300" y="202" font-size="12">(synthesized concept)</tspan>
+            </text>
+            <!-- Edge: Topic Article → Connection -->
+            <line x1="300" y1="219" x2="300" y2="286" stroke="#6B6B6B" stroke-width="1.5"/>
+            <polygon points="294,286 300,296 306,286" fill="#6B6B6B"/>
+            <rect x="196" y="248" width="208" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.92"/>
+            <text x="300" y="261" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#6B6B6B">weight 1–10 · /connect</text>
+            <!-- Node: Connection -->
+            <rect x="190" y="296" width="220" height="56" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="300" y="317" font-size="14" font-weight="600">Connection</tspan>
+              <tspan x="300" y="335" font-size="12">(cross-domain insight)</tspan>
+            </text>
+            <!-- Edge: Connection → Project -->
+            <line x1="300" y1="352" x2="300" y2="419" stroke="#6B6B6B" stroke-width="1.5"/>
+            <polygon points="294,419 300,429 306,419" fill="#6B6B6B"/>
+            <rect x="222" y="381" width="156" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.92"/>
+            <text x="300" y="394" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#6B6B6B">/query match</text>
+            <!-- Node: Project -->
+            <rect x="190" y="429" width="220" height="56" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="300" y="450" font-size="14" font-weight="600">Project</tspan>
+              <tspan x="300" y="468" font-size="12">(active work context)</tspan>
+            </text>
+          </svg>
         </div>
       </section>
 
@@ -201,18 +203,57 @@ graph TD
         <h2 id="h-rsi-loop">Recursive Self-Improvement Loop</h2>
         <p>The vault improves its own outputs using its own infrastructure. After each /orchestrate run, a quality measurement agent scores the enriched saves. A calibrated judge cascade estimates fabrication risk and quality. Prompt improvements triggered by low-scoring runs are re-measured on the next run — closing the feedback cycle automatically.</p>
 
-        <div class="diagram-block" role="img" aria-label="RSI-LOOP: five-node flowchart left-to-right — Instrument leads to Measure, Measure to Judge (amber, the calibrated cascade), Judge to Improve, Improve to Re-measure, Re-measure cycles back to Measure">
-          <pre class="mermaid">%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#EFF6FF', 'primaryTextColor': '#1C1C1E', 'primaryBorderColor': '#2563EB', 'lineColor': '#6B6B6B'}}}%%
-flowchart LR
-    A["Instrument\n(telemetry)"] --> B["Measure\n(quality score)"]
-    B --> C["Judge\n(calibrated cascade)"]
-    C --> D["Improve\n(prompt · schema · weights)"]
-    D --> E["Re-measure\n(next run)"]
-    E --> B
-    classDef loop fill:#EFF6FF,stroke:#2563EB,color:#1E3A8A
-    classDef judge fill:#FFFBEB,stroke:#D97706,color:#92400E
-    class A,B,D,E loop
-    class C judge</pre>
+        <div class="diagram-block">
+          <svg viewBox="0 0 900 230" width="100%" role="img" aria-label="RSI-LOOP: five-node cycle left-to-right — Instrument, Measure, Judge (amber, calibrated cascade), Improve, Re-measure — with a curved back-arc from Re-measure to Measure forming the RSI loop">
+            <!-- Node 1: Instrument (blue) -->
+            <rect x="27" y="24" width="150" height="72" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="102" y="52" font-size="13" font-weight="600">Instrument</tspan>
+              <tspan x="102" y="70" font-size="11">(telemetry)</tspan>
+            </text>
+            <!-- Arrow: Instrument → Measure -->
+            <line x1="177" y1="60" x2="194" y2="60" stroke="#6B6B6B" stroke-width="1.5"/>
+            <polygon points="194,56 201,60 194,64" fill="#6B6B6B"/>
+            <!-- Node 2: Measure (blue) -->
+            <rect x="201" y="24" width="150" height="72" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="276" y="52" font-size="13" font-weight="600">Measure</tspan>
+              <tspan x="276" y="70" font-size="11">(quality score)</tspan>
+            </text>
+            <!-- Arrow: Measure → Judge -->
+            <line x1="351" y1="60" x2="368" y2="60" stroke="#6B6B6B" stroke-width="1.5"/>
+            <polygon points="368,56 375,60 368,64" fill="#6B6B6B"/>
+            <!-- Node 3: Judge (amber) -->
+            <rect x="375" y="24" width="150" height="72" rx="8" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#92400E">
+              <tspan x="450" y="52" font-size="13" font-weight="600">Judge</tspan>
+              <tspan x="450" y="70" font-size="11">(calibrated cascade)</tspan>
+            </text>
+            <!-- Arrow: Judge → Improve -->
+            <line x1="525" y1="60" x2="542" y2="60" stroke="#6B6B6B" stroke-width="1.5"/>
+            <polygon points="542,56 549,60 542,64" fill="#6B6B6B"/>
+            <!-- Node 4: Improve (blue) — three-line label -->
+            <rect x="549" y="24" width="150" height="72" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="624" y="44" font-size="13" font-weight="600">Improve</tspan>
+              <tspan x="624" y="61" font-size="10">(prompt · schema</tspan>
+              <tspan x="624" y="76" font-size="10">· weights)</tspan>
+            </text>
+            <!-- Arrow: Improve → Re-measure -->
+            <line x1="699" y1="60" x2="716" y2="60" stroke="#6B6B6B" stroke-width="1.5"/>
+            <polygon points="716,56 723,60 716,64" fill="#6B6B6B"/>
+            <!-- Node 5: Re-measure (blue) -->
+            <rect x="723" y="24" width="150" height="72" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="798" y="52" font-size="13" font-weight="600">Re-measure</tspan>
+              <tspan x="798" y="70" font-size="11">(next run)</tspan>
+            </text>
+            <!-- Back-arc: Re-measure → Measure (the RSI loop) -->
+            <!-- Arc exits Re-measure bottom-center (798,96), curves down through y=178, re-enters Measure bottom-center (276,96) -->
+            <path d="M 798,96 C 798,178 276,178 276,105" fill="none" stroke="#6B6B6B" stroke-width="1.5"/>
+            <!-- Upward arrowhead at Measure node bottom — tip at (276,96), wings at y=105 -->
+            <polygon points="270,105 276,96 282,105" fill="#6B6B6B"/>
+          </svg>
         </div>
       </section>
 
@@ -363,67 +404,6 @@ flowchart LR
     </main>
   </div>
 
-  <!-- Mermaid initialization: inline script at end of body to ensure diagrams render.
-       The mermaid-init.js ES module does not execute on file:// URLs in WKWebView
-       (known WKWebView restriction). This inline script is the reliable fallback that
-       fires after DOMContentLoaded in all environments including local file preview. -->
-  <script>
-    (function () {
-      if (!window.mermaid) return;     // CDN script didn't load — skip gracefully
-
-      window.mermaid.initialize({
-        startOnLoad: false,            // we call run() explicitly below
-        theme: 'base',
-        themeVariables: {
-          primaryColor:        '#EFF6FF',
-          primaryTextColor:    '#1C1C1E',
-          primaryBorderColor:  '#2563EB',
-          lineColor:           '#6B6B6B',
-          secondaryColor:      '#FFFBEB',
-          tertiaryColor:       '#F0FDF4',
-          background:          '#FFFFFF',
-          mainBkg:             '#EFF6FF',
-          nodeBorder:          '#2563EB',
-          clusterBkg:          '#FAFAF9',
-          clusterBorder:       '#E5E4E2',
-          titleColor:          '#1C1C1E',
-          edgeLabelBackground: '#FFFFFF',
-          fontFamily:          'Inter, system-ui, sans-serif',
-          fontSize:            '13px',
-        },
-        flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
-        sequence:  { useMaxWidth: true },
-      });
-
-      // Explicit run — DOMContentLoaded has already fired here (end of body)
-      window.mermaid.run({ querySelector: '.mermaid' }).then(function () {
-        // After rendering, resize cycle-heavy LR flowcharts so back-edge arrows
-        // have vertical room. Mermaid's LR back-edges render at the bottom of the
-        // viewBox; at typical column widths the SVG scales to ~70px tall and the
-        // back-edge compresses to ~10px — essentially invisible. We read each SVG's
-        // viewBox aspect ratio and, if the diagram is very wide (aspectRatio > 6),
-        // force a minimum height of 180px so the cycle arc is clearly visible.
-        document.querySelectorAll('pre.mermaid svg').forEach(function (svg) {
-          var vb = svg.getAttribute('viewBox');
-          if (!vb) return;
-          var parts = vb.split(/\s+/);
-          var vbW = parseFloat(parts[2]);
-          var vbH = parseFloat(parts[3]);
-          if (isNaN(vbW) || isNaN(vbH) || vbH === 0) return;
-          var aspect = vbW / vbH;
-          // Wide diagrams (aspect > 6) compress back-edges to near-invisible at natural
-          // scale. Setting preserveAspectRatio="none" with an explicit height stretches
-          // the viewBox vertically so back-edges occupy the full height range.
-          if (aspect > 6) {
-            svg.setAttribute('height', '200');
-            svg.setAttribute('width', '100%');
-            svg.setAttribute('preserveAspectRatio', 'none');
-            svg.style.minHeight = '200px';
-          }
-        });
-      });
-    }());
-  </script>
 
 </body>
 </html>
