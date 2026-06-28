@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture — Research Vault</title>
+
+  <!--
+    External dependencies:
+    - Google Fonts: Inter (400,600,700) + JetBrains Mono — DESIGN.md typography stack
+    - Mermaid.js v11 via jsDelivr CDN (loaded as ES module via assets/mermaid-init.js)
+    - Shared design tokens + layout: assets/shared.css
+    - Site nav injection + ToC scroll tracking: assets/nav.js
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/shared.css">
+  <!-- Mermaid: inline initialization block handles the UMD/ESM timing complexity.
+       We load the UMD CDN script synchronously (blocking, so window.mermaid is set
+       before DOMContentLoaded), then immediately override startOnLoad to false so
+       Mermaid's auto-init doesn't fire before we configure it. The module script
+       runs after DOMContentLoaded and calls mermaid.run() with our theme tokens.
+       This pattern avoids the data-processed / re-init conflicts. -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>
+    // Pre-configure before DOMContentLoaded so startOnLoad auto-init is disabled
+    if (window.mermaid) {
+      window.mermaid.initialize({ startOnLoad: false });
+    }
+  </script>
+  <script type="module" src="assets/mermaid-init.js"></script>
+  <script defer src="assets/nav.js"></script>
+
+  <style>
+    /* ─── scroll-margin accounts for the 52px sticky site-nav injected by nav.js ─── */
+    section[id] {
+      scroll-margin-top: calc(52px + 24px);
+    }
+
+    /* ─── Orchestration pattern cards ─────────────────────────────────────────── */
+    .pattern-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--sp-md);
+      margin: var(--sp-lg) 0;
+    }
+
+    .pattern-card {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-md);
+      padding: var(--sp-md);
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+
+    .pattern-card:hover {
+      border-color: var(--c-accent);
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+    }
+
+    /* Icon container: fixed-size tinted square (SVG replaces emoji) */
+    .pattern-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--c-tag-bg);
+      border-radius: var(--r-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--sp-sm);
+      flex-shrink: 0;
+    }
+
+    .pattern-icon svg {
+      width: 18px;
+      height: 18px;
+      color: var(--c-accent);
+      stroke: currentColor;
+    }
+
+    .pattern-title {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      color: var(--c-text);
+      margin-bottom: var(--sp-xs);
+      line-height: 1.3;
+    }
+
+    .pattern-desc {
+      font-size: 0.875rem;
+      color: var(--c-text-sec);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    /* ─── ADR table: overflow wrapper for 3-col table on mobile ──────────────── */
+    .adr-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-md);
+      margin: var(--sp-md) 0;
+    }
+
+    .adr-table-wrap table {
+      margin: 0;
+    }
+
+    /* Mermaid SVG overflow fix: back-edges in flowchart LR (cycle arrows like E→B)
+       render at the bottom of the viewBox but compress to only a few pixels when
+       max-width:100%/height:auto scales a wide diagram into a narrow column.
+       Force a taller minimum on diagram blocks so the viewBox has more vertical
+       room to display, and allow SVG overflow to prevent clipping. */
+    pre.mermaid {
+      min-height: 160px;
+    }
+
+    pre.mermaid svg {
+      overflow: visible;
+      min-height: 120px;
+    }
+
+    /* Mobile: at very narrow viewports, the Why column is the longest — keep
+       it visible but let the table scroll rather than crushing content */
+    @media (max-width: 800px) {
+      .pattern-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .pattern-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body data-page="architecture">
+
+  <!-- Mobile nav: visible ≤800px (toggled via shared.css @media rule) -->
+  <!-- nav.js prepends .site-nav above this; mobile-nav is sticky top:52px -->
+  <nav class="mobile-nav" aria-label="Page sections">
+    <details>
+      <summary>Contents</summary>
+      <ul class="mobile-nav-list">
+        <li><a href="#core-model">Core Model</a></li>
+        <li><a href="#rsi-loop">RSI Loop</a></li>
+        <li><a href="#patterns">Patterns</a></li>
+        <li><a href="#adr-section">Architecture Decisions</a></li>
+        <li><a href="#what-it-proves">What This Demonstrates</a></li>
+      </ul>
+    </details>
+  </nav>
+
+  <div class="layout">
+
+    <!-- Sidebar TOC — hidden ≤800px via shared.css; sticky below 52px site-nav -->
+    <aside class="sidebar" aria-label="Table of contents">
+      <span class="sidebar-label">Sections</span>
+      <ul class="toc" role="list">
+        <li><a href="#core-model">Core Model</a></li>
+        <li><a href="#rsi-loop">RSI Loop</a></li>
+        <li><a href="#patterns">Patterns</a></li>
+        <li><a href="#adr-section">Architecture Decisions</a></li>
+        <li><a href="#what-it-proves">What This Demonstrates</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main content area -->
+    <main class="content" id="main-content">
+
+      <!-- ── Hero ──────────────────────────────────────────────────────────── -->
+      <header class="page-hero">
+        <span class="hero-breadcrumb">Research Vault / Architecture</span>
+        <h1>Architecture &amp; Design Philosophy</h1>
+        <p class="hero-subtitle">The meta-level story — how the vault models itself as a weighted DAG, and the recursive self-improvement loop that makes the system better over time.</p>
+      </header>
+
+      <!-- ── Section 1: Core Model ─────────────────────────────────────────── -->
+      <section id="core-model" aria-labelledby="h-core-model">
+        <h2 id="h-core-model">The Core Model: A Weighted DAG</h2>
+        <p>The vault is a directed acyclic graph where every reference points strictly upward. Saves are leaf nodes. Topics synthesize saves. Connections link topics across domains. Projects consume connections. BFS navigation with YAML-first scoring gates expensive full reads — the system stays fast at 6K+ saves by never reading everything at once.</p>
+
+        <div class="diagram-block" role="img" aria-label="DAG-MODEL: four-node directed acyclic graph showing Save, Topic Article, Connection, and Project nodes with weighted edges pointing upward through each level">
+          <pre class="mermaid">%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#EFF6FF', 'primaryTextColor': '#1C1C1E', 'primaryBorderColor': '#2563EB', 'lineColor': '#6B6B6B'}}}%%
+graph TD
+    S["Save\n(single resource)"]
+    T["Topic Article\n(synthesized concept)"]
+    CN["Connection\n(cross-domain insight)"]
+    P["Project\n(active work context)"]
+    S -->|"weight 1-10 · /compile"| T
+    T -->|"weight 1-10 · /connect"| CN
+    CN -->|"/query match"| P
+    classDef node fill:#EFF6FF,stroke:#2563EB,color:#1E3A8A
+    class S,T,CN,P node</pre>
+        </div>
+      </section>
+
+      <!-- ── Section 2: RSI Loop ───────────────────────────────────────────── -->
+      <section id="rsi-loop" aria-labelledby="h-rsi-loop">
+        <h2 id="h-rsi-loop">Recursive Self-Improvement Loop</h2>
+        <p>The vault improves its own outputs using its own infrastructure. After each /orchestrate run, a quality measurement agent scores the enriched saves. A calibrated judge cascade estimates fabrication risk and quality. Prompt improvements triggered by low-scoring runs are re-measured on the next run — closing the feedback cycle automatically.</p>
+
+        <div class="diagram-block" role="img" aria-label="RSI-LOOP: five-node flowchart left-to-right — Instrument leads to Measure, Measure to Judge (amber, the calibrated cascade), Judge to Improve, Improve to Re-measure, Re-measure cycles back to Measure">
+          <pre class="mermaid">%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#EFF6FF', 'primaryTextColor': '#1C1C1E', 'primaryBorderColor': '#2563EB', 'lineColor': '#6B6B6B'}}}%%
+flowchart LR
+    A["Instrument\n(telemetry)"] --> B["Measure\n(quality score)"]
+    B --> C["Judge\n(calibrated cascade)"]
+    C --> D["Improve\n(prompt · schema · weights)"]
+    D --> E["Re-measure\n(next run)"]
+    E --> B
+    classDef loop fill:#EFF6FF,stroke:#2563EB,color:#1E3A8A
+    classDef judge fill:#FFFBEB,stroke:#D97706,color:#92400E
+    class A,B,D,E loop
+    class C judge</pre>
+        </div>
+      </section>
+
+      <!-- ── Section 3: Patterns ───────────────────────────────────────────── -->
+      <section id="patterns" aria-labelledby="h-patterns">
+        <h2 id="h-patterns">Orchestration Patterns</h2>
+
+        <div class="pattern-grid">
+
+          <!-- Parallel Fan-out: Lucide share-2 icon (node-fork shape) -->
+          <div class="pattern-card">
+            <div class="pattern-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="18" cy="5" r="3"/>
+                <circle cx="18" cy="19" r="3"/>
+                <circle cx="6" cy="12" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </div>
+            <div class="pattern-title">Parallel Fan-out</div>
+            <p class="pattern-desc">N agents dispatched in one message; results merged by controller. Wall-clock = slowest single agent, not sum of all.</p>
+          </div>
+
+          <!-- Pipeline Stages: three connected stage boxes -->
+          <div class="pattern-card">
+            <div class="pattern-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="1" y="8" width="6" height="8" rx="1"/>
+                <rect x="9" y="8" width="6" height="8" rx="1"/>
+                <rect x="17" y="8" width="6" height="8" rx="1"/>
+                <line x1="7" y1="12" x2="9" y2="12"/>
+                <line x1="15" y1="12" x2="17" y2="12"/>
+              </svg>
+            </div>
+            <div class="pattern-title">Pipeline Stages</div>
+            <p class="pattern-desc">Item A reaches stage 3 while item B is still in stage 1. No synchronization barrier; no wasted idle time.</p>
+          </div>
+
+          <!-- Worktree Isolation: git-branch fork shape -->
+          <div class="pattern-card">
+            <div class="pattern-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="6" cy="6" r="3"/>
+                <circle cx="6" cy="18" r="3"/>
+                <circle cx="18" cy="6" r="3"/>
+                <line x1="6" y1="9" x2="6" y2="15"/>
+                <path d="M9 6h4a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </div>
+            <div class="pattern-title">Worktree Isolation</div>
+            <p class="pattern-desc">Each agent works in a fresh git worktree. Cherry-pick to main when done — no merge conflicts.</p>
+          </div>
+
+          <!-- Loop-Until-Dry: refresh / cycle arrow -->
+          <div class="pattern-card">
+            <div class="pattern-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+            </div>
+            <div class="pattern-title">Loop-Until-Dry</div>
+            <p class="pattern-desc">Keep spawning finder agents until K consecutive rounds return nothing new. Terminates naturally without a fixed count.</p>
+          </div>
+
+          <!-- Code Review Ceremony: clipboard with checkmark -->
+          <div class="pattern-card">
+            <div class="pattern-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m9 11 3 3L22 4"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+            </div>
+            <div class="pattern-title">Code Review Ceremony</div>
+            <p class="pattern-desc">Spec-pass agent checks "does it match the plan?" Quality-pass agent checks "is it correct?" Two independent gates before any merge.</p>
+          </div>
+
+          <!-- Budget-Aware Loops: dollar sign -->
+          <div class="pattern-card">
+            <div class="pattern-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="12" y1="1" x2="12" y2="23"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+            </div>
+            <div class="pattern-title">Budget-Aware Loops</div>
+            <p class="pattern-desc">Token budget controls fleet size dynamically. Cost is a first-class variable, not an afterthought.</p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── Section 4: ADR ────────────────────────────────────────────────── -->
+      <section id="adr-section" aria-labelledby="h-adr-section">
+        <h2 id="h-adr-section">73 Architecture Decision Records</h2>
+
+        <!-- Callout: amber left-border explaining what an ADR is -->
+        <div class="callout" role="note">
+          <span class="callout-label">What is an ADR?</span>
+          <p>Architecture Decision Records (ADRs) document key technical choices: the problem context, every option considered, a decision matrix, and the final rationale. In the Research Vault, 73 ADRs capture decisions like "append-only logs over mutable files," "cherry-pick over full merge," and "BFS/YAML-first navigation over brute-force search." Each ADR is a first-class artifact that future sessions — human or AI — can read to understand the system without re-litigating past decisions.</p>
+        </div>
+
+        <!-- Featured ADRs: 3 rows, 3 columns — overflow wrapper for mobile -->
+        <div class="adr-table-wrap" role="region" aria-label="Featured architecture decision records">
+          <table>
+            <thead>
+              <tr>
+                <th>ADR</th>
+                <th>Decision</th>
+                <th>Why</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>#11</strong> &mdash; Append-only logs</td>
+                <td>One file per entry + derived <code>index.md</code></td>
+                <td>Concurrent agents can write without conflicts; entries are permanent artifacts, not mutable state</td>
+              </tr>
+              <tr>
+                <td><strong>#28</strong> &mdash; Cherry-pick merge</td>
+                <td>Cherry-pick feature commits to main</td>
+                <td>Vault backup commits create file-location conflicts on full merge</td>
+              </tr>
+              <tr>
+                <td><strong>#46</strong> &mdash; BFS/YAML-first</td>
+                <td>Read frontmatter before full bodies</td>
+                <td>Scales to 6K+ saves; L1 filter eliminates 80&ndash;90% of reads before they happen</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── Section 5: What This Demonstrates ────────────────────────────── -->
+      <section id="what-it-proves" aria-labelledby="h-what-it-proves">
+        <h2 id="h-what-it-proves">What This Demonstrates</h2>
+        <p>Software engineering fundamentals applied at real scale: data modeling (a typed, weighted DAG with strict reference direction), test coverage (985 tests across agent behavior, pipeline invariants, and script correctness), and systematic decision-making (73 Architecture Decision Records, each with a problem statement, options analysis, and decision matrix).</p>
+        <p>AI engineering discipline, not just AI usage: a custom agent framework built on Claude Code, observable pipelines (append-only telemetry logs, quality scoring, cost tracking per run), and a recursive self-improvement loop that closes the feedback cycle automatically.</p>
+        <p>The vault is not a prototype. It runs every day, processes real content, and improves its own quality over time. That&rsquo;s the difference between &ldquo;built a thing with AI&rdquo; and &ldquo;built a reliable system that uses AI.&rdquo;</p>
+      </section>
+
+      <!-- Footer -->
+      <footer class="page-footer">
+        Built with Claude &middot; <a href="https://github.com/allstoncodes/research-vault-showcase">GitHub</a>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- Mermaid initialization: inline script at end of body to ensure diagrams render.
+       The mermaid-init.js ES module does not execute on file:// URLs in WKWebView
+       (known WKWebView restriction). This inline script is the reliable fallback that
+       fires after DOMContentLoaded in all environments including local file preview. -->
+  <script>
+    (function () {
+      if (!window.mermaid) return;     // CDN script didn't load — skip gracefully
+
+      window.mermaid.initialize({
+        startOnLoad: false,            // we call run() explicitly below
+        theme: 'base',
+        themeVariables: {
+          primaryColor:        '#EFF6FF',
+          primaryTextColor:    '#1C1C1E',
+          primaryBorderColor:  '#2563EB',
+          lineColor:           '#6B6B6B',
+          secondaryColor:      '#FFFBEB',
+          tertiaryColor:       '#F0FDF4',
+          background:          '#FFFFFF',
+          mainBkg:             '#EFF6FF',
+          nodeBorder:          '#2563EB',
+          clusterBkg:          '#FAFAF9',
+          clusterBorder:       '#E5E4E2',
+          titleColor:          '#1C1C1E',
+          edgeLabelBackground: '#FFFFFF',
+          fontFamily:          'Inter, system-ui, sans-serif',
+          fontSize:            '13px',
+        },
+        flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+        sequence:  { useMaxWidth: true },
+      });
+
+      // Explicit run — DOMContentLoaded has already fired here (end of body)
+      window.mermaid.run({ querySelector: '.mermaid' }).then(function () {
+        // After rendering, resize cycle-heavy LR flowcharts so back-edge arrows
+        // have vertical room. Mermaid's LR back-edges render at the bottom of the
+        // viewBox; at typical column widths the SVG scales to ~70px tall and the
+        // back-edge compresses to ~10px — essentially invisible. We read each SVG's
+        // viewBox aspect ratio and, if the diagram is very wide (aspectRatio > 6),
+        // force a minimum height of 180px so the cycle arc is clearly visible.
+        document.querySelectorAll('pre.mermaid svg').forEach(function (svg) {
+          var vb = svg.getAttribute('viewBox');
+          if (!vb) return;
+          var parts = vb.split(/\s+/);
+          var vbW = parseFloat(parts[2]);
+          var vbH = parseFloat(parts[3]);
+          if (isNaN(vbW) || isNaN(vbH) || vbH === 0) return;
+          var aspect = vbW / vbH;
+          // Wide diagrams (aspect > 6) compress back-edges to near-invisible at natural
+          // scale. Setting preserveAspectRatio="none" with an explicit height stretches
+          // the viewBox vertically so back-edges occupy the full height range.
+          if (aspect > 6) {
+            svg.setAttribute('height', '200');
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('preserveAspectRatio', 'none');
+            svg.style.minHeight = '200px';
+          }
+        });
+      });
+    }());
+  </script>
+
+</body>
+</html>
