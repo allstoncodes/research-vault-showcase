@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Research Vault — Personal AI Knowledge Graph</title>
+
+  <!--
+    External dependencies:
+    - Google Fonts: Inter (400,600,700) + JetBrains Mono — DESIGN.md typography stack
+    - assets/shared.css — DESIGN.md tokens + shared layout (sidebar, hero, cards, CTAs)
+    - assets/mermaid-init.js — Mermaid v11 (unused on this page; linked for site consistency)
+    - assets/nav.js — injects .site-nav bar; drives sidebar TOC active states via IntersectionObserver
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/shared.css">
+  <script type="module" src="assets/mermaid-init.js"></script>
+  <script defer src="assets/nav.js"></script>
+
+  <style>
+    /* ── Page-specific overrides for index.html ── */
+
+    /* Section anchors: clear the sticky site-nav (52px) + buffer */
+    section { scroll-margin-top: 72px; }
+
+    /* Card icons use inline SVG — override shared.css font-size default with px dimensions */
+    .card-icon {
+      width: 24px;
+      height: 24px;
+      color: var(--c-accent);
+      margin-bottom: var(--sp-sm);
+      display: block;
+      flex-shrink: 0;
+    }
+
+    /* 4-wide capability card grid on desktop; 2-col tablet; 1-col mobile */
+    .card-grid { grid-template-columns: repeat(4, 1fr); }
+    @media (max-width: 800px) { .card-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .card-grid { grid-template-columns: 1fr; } }
+
+    /* CTA group: stacks button + short descriptor label vertically */
+    .cta-item { display: flex; flex-direction: column; gap: 4px; }
+    .cta-desc { font-size: 0.8125rem; color: var(--c-text-muted); }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+
+  <!-- Mobile section nav (visible ≤800px; sticky below injected site-nav at top:52px per shared.css) -->
+  <nav class="mobile-nav" aria-label="Page sections">
+    <details>
+      <summary>Contents</summary>
+      <ul class="mobile-nav-list">
+        <li><a href="#problem">The Problem</a></li>
+        <li><a href="#solution">What I Built</a></li>
+        <li><a href="#capabilities">Capabilities</a></li>
+        <li><a href="#explore">Explore</a></li>
+      </ul>
+    </details>
+  </nav>
+
+  <div class="layout">
+
+    <!-- Sidebar ToC (desktop only; hidden ≤800px via shared.css) -->
+    <aside class="sidebar" aria-label="Table of contents">
+      <span class="sidebar-label">On this page</span>
+      <ul class="toc" role="list">
+        <li><a href="#problem">The Problem</a></li>
+        <li><a href="#solution">What I Built</a></li>
+        <li><a href="#capabilities">Capabilities</a></li>
+        <li><a href="#explore">Explore</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main content -->
+    <main class="content" id="main-content">
+
+      <!-- Hero banner -->
+      <header class="page-hero">
+        <p class="hero-breadcrumb">Research Vault</p>
+        <h1>A Personal AI Knowledge Graph</h1>
+        <p class="hero-subtitle">6,183 curated saves. Organized, enriched, and synthesized by AI agents — queryable in seconds.</p>
+
+        <div class="stat-cluster" role="list" aria-label="Vault statistics">
+          <div class="stat-item" role="listitem">
+            <span class="stat-value">6K</span>
+            <span class="stat-label">Curated saves</span>
+          </div>
+          <div class="stat-item" role="listitem">
+            <span class="stat-value">985</span>
+            <span class="stat-label">Tests passing</span>
+          </div>
+          <div class="stat-item" role="listitem">
+            <span class="stat-value">73</span>
+            <span class="stat-label">Architecture Decision Records (ADRs)</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ── Section 1: The Problem ── -->
+      <section id="problem" aria-labelledby="h-problem">
+        <h2 id="h-problem">The Problem with Saving Things</h2>
+        <p>We save articles, threads, and papers with good intentions. They pile up — unsearched, unread, disconnected. Two years ago I had 3,000 bookmarks I couldn't recall or query. The more I saved, the less I could find. I built Research Vault to turn that growing pile into a queryable knowledge graph.</p>
+      </section>
+
+      <!-- ── Section 2: What I Built ── -->
+      <section id="solution" aria-labelledby="h-solution">
+        <h2 id="h-solution">What I Built</h2>
+        <p>A personal intelligence system that ingests saves, enriches them with Claude, and synthesizes them into topic articles, connection notes, and daily briefings. The vault grows more useful the more I use it — each save makes the whole graph smarter.</p>
+      </section>
+
+      <!-- ── Section 3: Core Capabilities ── -->
+      <section id="capabilities" aria-labelledby="h-capabilities">
+        <h2 id="h-capabilities">Core Capabilities</h2>
+        <div class="card-grid">
+
+          <!-- /orchestrate — Cycle/arrows icon: represents end-to-end pipeline automation -->
+          <article class="card">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M21.5 2v6h-6"/>
+              <path d="M2.5 22v-6h6"/>
+              <path d="M2 11.5a10 10 0 0 1 18.8-4.3"/>
+              <path d="M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+            <p class="card-title">/orchestrate</p>
+            <p class="card-desc">End-to-end agent pipeline: raw saves &rarr; enriched &rarr; briefed</p>
+            <span class="card-tag">/orchestrate</span>
+          </article>
+
+          <!-- /compile — Layers icon: represents synthesis/stacking of saves into articles -->
+          <article class="card">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/>
+              <path d="m22 12-8.58 3.91a2 2 0 0 1-1.66 0L3 12"/>
+              <path d="m22 17-8.58 3.91a2 2 0 0 1-1.66 0L3 17"/>
+            </svg>
+            <p class="card-title">/compile</p>
+            <p class="card-desc">Synthesizes topic articles from individual saves</p>
+            <span class="card-tag">/compile</span>
+          </article>
+
+          <!-- /query — Search icon: represents NL retrieval across the vault -->
+          <article class="card">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+            <p class="card-title">/query</p>
+            <p class="card-desc">Natural-language retrieval across 6K saves and 59 topics</p>
+            <span class="card-tag">/query</span>
+          </article>
+
+          <!-- /connect — Link icon: represents cross-domain connection discovery -->
+          <article class="card">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+            <p class="card-title">/connect</p>
+            <p class="card-desc">Finds non-obvious cross-domain connections between topics</p>
+            <span class="card-tag">/connect</span>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- ── Section 4: Explore ── -->
+      <section id="explore" aria-labelledby="h-explore">
+        <h2 id="h-explore">Explore the Vault</h2>
+        <p>Three ways to go deeper:</p>
+        <div class="cta-row">
+          <div class="cta-item">
+            <a class="cta-btn" href="overview.html">Overview</a>
+            <span class="cta-desc">The system at a glance</span>
+          </div>
+          <div class="cta-item">
+            <a class="cta-btn cta-btn-outline" href="technical.html">Technical Details</a>
+            <span class="cta-desc">How it was built</span>
+          </div>
+          <div class="cta-item">
+            <a class="cta-btn cta-btn-outline" href="architecture.html">Architecture</a>
+            <span class="cta-desc">Design philosophy</span>
+          </div>
+        </div>
+      </section>
+
+      <footer class="page-footer">Built with Claude &middot; <a href="https://github.com/allstoncodes/research-vault-showcase">GitHub</a></footer>
+
+    </main>
+  </div>
+
+</body>
+</html>
