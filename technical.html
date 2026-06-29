@@ -145,7 +145,7 @@
     <ul class="mobile-nav-list">
       <li><a href="#tech-stack">Tech Stack</a></li>
       <li><a href="#agent-architecture">Agent Architecture</a></li>
-      <li><a href="#orchestrate-pipeline">/orchestrate Pipeline</a></li>
+      <li><a href="#orchestrate-pipeline">Ingestion Pipeline</a></li>
       <li><a href="#quality-testing">Quality &amp; Testing</a></li>
       <li><a href="#infrastructure">Infrastructure</a></li>
     </ul>
@@ -159,7 +159,7 @@
       <ul class="toc" role="list">
         <li><a href="#tech-stack">Tech Stack</a></li>
         <li><a href="#agent-architecture">Agent Architecture</a></li>
-        <li><a href="#orchestrate-pipeline">/orchestrate Pipeline</a></li>
+        <li><a href="#orchestrate-pipeline">Ingestion Pipeline</a></li>
         <li><a href="#quality-testing">Quality &amp; Testing</a></li>
         <li><a href="#infrastructure">Infrastructure</a></li>
       </ul>
@@ -336,117 +336,207 @@
       </section>
 
       <!-- ──────────────────────────────────────────────────────────────
-           Section 3 — /orchestrate Pipeline
+           Section 3 — Ingestion Pipeline (LangGraph StateGraph)
       ─────────────────────────────────────────────────────────────── -->
       <section id="orchestrate-pipeline" aria-labelledby="h-orchestrate-pipeline">
-        <h2 id="h-orchestrate-pipeline">The /orchestrate Pipeline</h2>
+        <h2 id="h-orchestrate-pipeline">The Ingestion Pipeline — a LangGraph StateGraph</h2>
         <p>
-          The vault's primary ingestion command. It reads every raw file from the
-          inbox, dispatches parallel Claude API enrichment agents, and writes structured
-          YAML-frontmattered saves to <code>01_Social_Memory</code>. Each run is logged to <code>CHANGELOG</code>
-          with cost, save count, and error count.
+          The <code>/orchestrate</code> ingestion command is a LangGraph <code>StateGraph</code>
+          of <strong>8 nodes</strong> with one conditional entry gate (<code>inbox_count &gt; 0</code>,
+          else short-circuit to END). All nodes share a <code>PipelineState</code> TypedDict whose
+          list fields use <code>Annotated[list, add]</code> reducers so each node
+          <em>accumulates</em> results into shared state without overwriting previous nodes' work.
+          The graph is wrapped in <code>SqliteSaver</code> so an interrupted run resumes from the
+          last completed node without redoing any work.
         </p>
 
-        <div class="diagram-block" role="img" aria-label="Orchestrate sequence diagram: user invokes /orchestrate; controller reads inbox files, dispatches N parallel enrichment agents, agents write saves and CHANGELOG, return summary">
-          <span class="diagram-label">ORCHESTRATE-SEQ — Ingestion sequence</span>
+        <div class="diagram-block">
+          <span class="diagram-label">STATEGRAPH — 8-node ingestion pipeline</span>
           <div class="tier-legend" aria-hidden="true">
-            <span class="legend-item"><span class="dot dot-blue"></span>Controller</span>
-            <span class="legend-item"><span class="dot dot-amber"></span>Enrichment agents</span>
-            <span class="legend-item"><span class="dot dot-green"></span>Vault storage</span>
+            <span class="legend-item"><span class="dot dot-blue"></span>Process node</span>
+            <span class="legend-item"><span class="dot dot-green"></span>Storage / LanceDB node</span>
           </div>
-          <!-- Hand-authored inline SVG sequence diagram — no Mermaid dependency -->
-          <!-- viewBox 880×600; 6 lifelines evenly at x=73,220,367,514,661,808 (spacing=147) -->
-          <!-- Blue headers: User/Controller/00_Inbox/Enrichment Agents (#EFF6FF/#2563EB/#1E3A8A) -->
-          <!-- Green headers: 01_Social_Memory/CHANGELOG (#D1FAE5/#059669/#065F46) -->
-          <svg viewBox="0 0 880 600" width="100%" role="img" aria-label="Orchestrate sequence: User calls /orchestrate; Controller reads inbox, dispatches parallel enrichment agents; agents write saves and CHANGELOG, return results summary to User" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+          <!-- 8-node LangGraph StateGraph — 2-row snake layout matching overview.html Content Flow idiom.
+               Row 1 L→R: pre_flight → ingest → heuristic_enrich → llm_enrich.
+               Down-connector at right column (x=720). Row 2 R→L: route_career → embed (green/LanceDB) → topic_index → finalize.
+               Conditional END (red/dashed) hangs below pre_flight for the empty-inbox short-circuit.
+               Final END (muted) hangs below finalize for successful completion.
+               Node geometry mirrors overview.html: width=160, col-x=10/220/430/640, gap=50px. -->
+          <svg viewBox="0 0 820 320" width="100%" role="img"
+               aria-label="LangGraph StateGraph: 8-node ingestion pipeline. Row 1 left to right: pre_flight entry gate (branches inbox-count-greater-than-zero to ingest, or empty to END), ingest, heuristic_enrich, llm_enrich. Connector down on right. Row 2 right to left: route_career, embed LanceDB vectors green storage node, topic_index, finalize. Final END below finalize."
+               xmlns="http://www.w3.org/2000/svg" style="display:block;">
             <defs>
-              <!-- Gray arrowhead for sequence arrows -->
-              <marker id="seq-ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+              <!-- Gray arrowhead — main pipeline flow -->
+              <marker id="lg-ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
                 <polygon points="0 0, 10 3.5, 0 7" fill="#6B6B6B"/>
+              </marker>
+              <!-- Red arrowhead — empty-inbox short-circuit branch -->
+              <marker id="lg-ah-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
               </marker>
             </defs>
 
-            <!-- ── Lifeline header boxes (width=100, y=15–61) ── -->
+            <!-- ── ROW 1 (left → right, y=46..110, center_y=78) ── -->
 
-            <!-- 1. User (blue), center x=73 -->
-            <rect x="23" y="15" width="100" height="46" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
-            <text x="73" y="42" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" fill="#1E3A8A">User</text>
+            <!-- 1. pre_flight (entry gate — bold stroke signals it's the conditional gate) cx=90, cy=78 -->
+            <rect x="10" y="46" width="160" height="64" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="2"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="90" y="71" font-size="14" font-weight="600">pre_flight</tspan>
+              <tspan x="90" y="87" font-size="12">count inbox · gate</tspan>
+            </text>
 
-            <!-- 2. Controller (blue), center x=220 -->
-            <rect x="170" y="15" width="100" height="46" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
-            <text x="220" y="42" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11.5" font-weight="600" fill="#1E3A8A">Controller</text>
+            <!-- Edge: pre_flight → ingest (main flow, labeled "inbox > 0") -->
+            <line x1="170" y1="78" x2="220" y2="78" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#lg-ah)"/>
+            <rect x="157" y="60" width="76" height="16" rx="3" fill="#FFFFFF" fill-opacity="0.92"/>
+            <text x="195" y="72" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-style="italic" fill="#6B6B6B">inbox &gt; 0</text>
 
-            <!-- 3. 00_Inbox (blue), center x=367 -->
-            <rect x="317" y="15" width="100" height="46" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
-            <text x="367" y="42" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11.5" font-weight="600" fill="#1E3A8A">00_Inbox</text>
+            <!-- 2. ingest (blue) cx=300, cy=78 -->
+            <rect x="220" y="46" width="160" height="64" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="300" y="71" font-size="14" font-weight="600">ingest</tspan>
+              <tspan x="300" y="87" font-size="12">URLs/clippings &#x2192; stubs</tspan>
+            </text>
 
-            <!-- 4. Enrichment Agents (blue, 2-line), center x=514 -->
-            <rect x="464" y="15" width="100" height="46" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
-            <text x="514" y="34" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="600" fill="#1E3A8A">Enrichment</text>
-            <text x="514" y="50" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="600" fill="#1E3A8A">Agents</text>
+            <!-- Edge: ingest → heuristic_enrich -->
+            <line x1="380" y1="78" x2="430" y2="78" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#lg-ah)"/>
 
-            <!-- 5. 01_Social_Memory (green storage, 2-line), center x=661 -->
-            <rect x="611" y="15" width="100" height="46" rx="6" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
-            <text x="661" y="34" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="600" fill="#065F46">01_Social</text>
-            <text x="661" y="50" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="600" fill="#065F46">Memory</text>
+            <!-- 3. heuristic_enrich (blue) cx=510, cy=78 — font-size 13 to fit longer name -->
+            <rect x="430" y="46" width="160" height="64" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="510" y="71" font-size="13" font-weight="600">heuristic_enrich</tspan>
+              <tspan x="510" y="87" font-size="12">rule-based tags</tspan>
+            </text>
 
-            <!-- 6. CHANGELOG (green storage), center x=808 -->
-            <rect x="758" y="15" width="100" height="46" rx="6" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
-            <text x="808" y="42" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="600" fill="#065F46">CHANGELOG</text>
+            <!-- Edge: heuristic_enrich → llm_enrich -->
+            <line x1="590" y1="78" x2="640" y2="78" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#lg-ah)"/>
 
-            <!-- ── Lifeline vertical dashes (y=61 → y=572) ── -->
-            <line x1="73"  y1="61" x2="73"  y2="572" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="5,5"/>
-            <line x1="220" y1="61" x2="220" y2="572" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="5,5"/>
-            <line x1="367" y1="61" x2="367" y2="572" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="5,5"/>
-            <line x1="514" y1="61" x2="514" y2="572" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="5,5"/>
-            <line x1="661" y1="61" x2="661" y2="572" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="5,5"/>
-            <line x1="808" y1="61" x2="808" y2="572" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="5,5"/>
+            <!-- 4. llm_enrich (blue) cx=720, cy=78 -->
+            <rect x="640" y="46" width="160" height="64" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="720" y="71" font-size="14" font-weight="600">llm_enrich</tspan>
+              <tspan x="720" y="87" font-size="12">Sonnet, concurrent</tspan>
+            </text>
 
-            <!-- ── Message arrows ── -->
-            <!-- Solid = call; dashed = return. Labels above arrow with white bg rect. -->
-            <!-- Arrow stroke-width=2 for solid calls; 1.5 for dashed returns. -->
+            <!-- Down-connector: llm_enrich bottom (720,110) → route_career top (720,200) — snake turn -->
+            <line x1="720" y1="110" x2="720" y2="200" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#lg-ah)"/>
 
-            <!-- MSG 1: User → Controller: /orchestrate (solid, y=100) -->
-            <line x1="73" y1="100" x2="220" y2="100" stroke="#6B6B6B" stroke-width="2" marker-end="url(#seq-ah)"/>
-            <rect x="83" y="79" width="107" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
-            <text x="146" y="92" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#1C1C1E">/orchestrate</text>
+            <!-- ── ROW 2 (right → left, y=200..264, center_y=232) ── -->
 
-            <!-- MSG 2: Controller → 00_Inbox: Read raw .md files (solid, y=160) -->
-            <line x1="220" y1="160" x2="367" y2="160" stroke="#6B6B6B" stroke-width="2" marker-end="url(#seq-ah)"/>
-            <rect x="220" y="139" width="147" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
-            <text x="293" y="152" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" fill="#1C1C1E">Read raw .md files</text>
+            <!-- 5. route_career (blue) cx=720, cy=232 -->
+            <rect x="640" y="200" width="160" height="64" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="720" y="225" font-size="14" font-weight="600">route_career</tspan>
+              <tspan x="720" y="241" font-size="12">&#x2192; personal-vault</tspan>
+            </text>
 
-            <!-- MSG 3: 00_Inbox → Controller: N files found (dashed return, y=220) -->
-            <line x1="367" y1="220" x2="220" y2="220" stroke="#6B6B6B" stroke-width="1.5" stroke-dasharray="6,4" marker-end="url(#seq-ah)"/>
-            <rect x="224" y="199" width="139" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
-            <text x="293" y="212" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" fill="#1C1C1E">N files found</text>
+            <!-- Edge: route_career → embed (going left; orient="auto" on marker rotates arrowhead 180°) -->
+            <line x1="640" y1="232" x2="590" y2="232" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#lg-ah)"/>
 
-            <!-- MSG 4: Controller → Enrichment Agents: Dispatch N agents (parallel) (solid, y=285) -->
-            <line x1="220" y1="285" x2="514" y2="285" stroke="#6B6B6B" stroke-width="2" marker-end="url(#seq-ah)"/>
-            <rect x="218" y="264" width="298" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
-            <text x="367" y="277" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" fill="#1C1C1E">Dispatch N agents (parallel)</text>
+            <!-- 6. embed (green — LanceDB storage node) cx=510, cy=232 — bold stroke + green palette -->
+            <rect x="430" y="200" width="160" height="64" rx="8" fill="#D1FAE5" stroke="#059669" stroke-width="2"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#065F46">
+              <tspan x="510" y="225" font-size="14" font-weight="600">embed</tspan>
+              <tspan x="510" y="241" font-size="12">LanceDB vectors</tspan>
+            </text>
 
-            <!-- MSG 5: Enrichment Agents → 01_Social_Memory: Write enriched saves (solid, y=350) -->
-            <line x1="514" y1="350" x2="661" y2="350" stroke="#6B6B6B" stroke-width="2" marker-end="url(#seq-ah)"/>
-            <rect x="510" y="329" width="155" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
-            <text x="587" y="342" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" fill="#1C1C1E">Write enriched saves</text>
+            <!-- Edge: embed → topic_index (going left) -->
+            <line x1="430" y1="232" x2="380" y2="232" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#lg-ah)"/>
 
-            <!-- MSG 6: Enrichment Agents → CHANGELOG: Log entries (solid, y=410) -->
-            <line x1="514" y1="410" x2="808" y2="410" stroke="#6B6B6B" stroke-width="2" marker-end="url(#seq-ah)"/>
-            <rect x="619" y="389" width="84" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
-            <text x="661" y="402" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12.5" fill="#1C1C1E">Log entries</text>
+            <!-- 7. topic_index (blue) cx=300, cy=232 -->
+            <rect x="220" y="200" width="160" height="64" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="300" y="225" font-size="14" font-weight="600">topic_index</tspan>
+              <tspan x="300" y="241" font-size="12">regen TOPIC-INDEX</tspan>
+            </text>
 
-            <!-- MSG 7: Enrichment Agents → Controller: N results (dashed return, y=475) -->
-            <line x1="514" y1="475" x2="220" y2="475" stroke="#6B6B6B" stroke-width="1.5" stroke-dasharray="6,4" marker-end="url(#seq-ah)"/>
-            <rect x="229" y="454" width="291" height="18" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
-            <text x="367" y="467" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#1C1C1E">N results (enriched / skipped / error)</text>
+            <!-- Edge: topic_index → finalize (going left) -->
+            <line x1="220" y1="232" x2="170" y2="232" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#lg-ah)"/>
 
-            <!-- MSG 8: Controller → User: Summary (dashed return, y=540, 2-line label) -->
-            <line x1="220" y1="540" x2="73" y2="540" stroke="#6B6B6B" stroke-width="1.5" stroke-dasharray="6,4" marker-end="url(#seq-ah)"/>
-            <rect x="55" y="510" width="183" height="28" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
-            <text x="146" y="524" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#1C1C1E">Summary</text>
-            <text x="146" y="537" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#6B6B6B">(cost · saves · errors)</text>
+            <!-- 8. finalize (blue) cx=90, cy=232 -->
+            <rect x="10" y="200" width="160" height="64" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text text-anchor="middle" font-family="Inter, system-ui, sans-serif" fill="#1E3A8A">
+              <tspan x="90" y="225" font-size="14" font-weight="600">finalize</tspan>
+              <tspan x="90" y="241" font-size="12">CHANGELOG + telemetry</tspan>
+            </text>
+
+            <!-- ── Conditional END — empty inbox short-circuit from pre_flight ── -->
+            <!-- Dashed red branch descends from pre_flight bottom-center (90, 110) -->
+            <line x1="90" y1="110" x2="90" y2="130" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#lg-ah-red)"/>
+            <!-- "empty" label sits to the right of the dashed line on a white-bg rect -->
+            <rect x="94" y="113" width="44" height="15" rx="3" fill="#FFFFFF" fill-opacity="0.92"/>
+            <text x="116" y="124" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10" font-style="italic" fill="#DC2626">empty</text>
+            <!-- END terminal — conditional short-circuit (red palette) -->
+            <rect x="35" y="130" width="110" height="28" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+            <text x="90" y="148" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" fill="#991B1B">END</text>
+
+            <!-- ── Final END — successful pipeline completion from finalize ── -->
+            <!-- Arrow descends from finalize bottom-center (90, 264) -->
+            <line x1="90" y1="264" x2="90" y2="282" stroke="#6B6B6B" stroke-width="1.5" marker-end="url(#lg-ah)"/>
+            <!-- END terminal — normal completion (muted palette) -->
+            <rect x="35" y="282" width="110" height="28" rx="6" fill="#F9FAFB" stroke="#9CA3AF" stroke-width="1.5"/>
+            <text x="90" y="300" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" fill="#6B6B6B">END</text>
           </svg>
+        </div>
+
+        <h3>Node breakdown</h3>
+        <div class="table-wrap" role="region" aria-label="LangGraph pipeline node breakdown">
+          <table>
+            <thead>
+              <tr>
+                <th>Node</th>
+                <th>Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>pre_flight</code></td>
+                <td>Counts inbox files; branches to <code>ingest</code> if <code>inbox_count &gt; 0</code>, else short-circuits to END — the conditional gate</td>
+              </tr>
+              <tr>
+                <td><code>ingest</code></td>
+                <td>Reads raw URL / clipping <code>.md</code> files from the inbox and creates structured save stubs</td>
+              </tr>
+              <tr>
+                <td><code>heuristic_enrich</code></td>
+                <td>Applies rule-based heuristics to assign <code>resource_type</code>, platform, and domain hints — no LLM call required</td>
+              </tr>
+              <tr>
+                <td><code>llm_enrich</code></td>
+                <td>Sends each stub to Claude Sonnet concurrently for title, summary, topics, and YAML frontmatter generation</td>
+              </tr>
+              <tr>
+                <td><code>route_career</code></td>
+                <td>Routes career-related saves to the personal-vault inbox rather than the research vault</td>
+              </tr>
+              <tr>
+                <td><code>embed</code></td>
+                <td>Generates vector embeddings for every save and upserts them into LanceDB for semantic retrieval</td>
+              </tr>
+              <tr>
+                <td><code>topic_index</code></td>
+                <td>Regenerates TOPIC-INDEX mini-indexes so BFS navigation is current on the next query</td>
+              </tr>
+              <tr>
+                <td><code>finalize</code></td>
+                <td>Writes the CHANGELOG entry (cost, save count, error count, run ID) and records per-run telemetry to SQLite</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <span class="callout-label">Why LangGraph, not LangChain</span>
+          <p>
+            LangGraph replaces an earlier ad-hoc loop with an explicit directed graph of typed nodes
+            and edges — making the pipeline structure readable and auditable at a glance. The shared
+            <code>PipelineState</code> TypedDict uses <code>Annotated[list, add]</code> reducers so
+            each node accumulates into shared state without overwriting previous nodes' work. The real
+            differentiator is <code>SqliteSaver</code> checkpointing: every completed node is persisted
+            to SQLite, so interrupted runs resume from the last checkpoint instead of starting over. A
+            recent production run hung mid-pipeline on a network read; after the timeout resolved, the
+            graph resumed cleanly from the last completed node, skipping already-processed saves with
+            no data loss.
+          </p>
         </div>
       </section>
 
